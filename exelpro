@@ -1,0 +1,436 @@
+# -*- coding: utf-8 -*-import os
+from _ctypes import alignment
+import sys
+import os
+import xlrd
+import xlwt
+#import xlutils.copy
+import calendar
+import string
+import decimal
+####################################################################################
+#全局变量
+#InputExelName = u'7a33bc8df84214461aa84a5863f7f7e6.xls'  #合并后的文件名
+DIR  = u'C:\exel/other' #待合并所有文件的目录，用户输入项
+os.chdir(DIR)
+f = open('config.txt', 'r')
+str=f.readline()   #年对应的字符串
+str1=f.readline()    #月对应的字符串
+str2=f.readline()      #文件路径
+str3=f.readline()      #生成的文件名
+YEAR= str[5:]
+MONTH=str1[6:]
+#print YEAR
+
+InputExelName = str3[14:-2]
+#YEAR = u'2015' #年，，默认2015
+#MONTH = u'5'
+SHEETNAME = u'INONE'
+nRows_Write = 6;
+DIR=str2[4:-2] #待合并所有文件的目录，用户输入项 #待合并所有文件的目录，用户输入项
+
+
+#####################################################################################
+##全局变量--样式
+##全局变量--样式
+YELLOW = 5
+WHITE = 9
+RED = 2
+PURPLE = 31
+GREEN1 = 42
+BLACK = 8
+GREEN2=50
+BLUE=31
+
+
+def fBorders(ileft,iright,itop,ibuttom):                #定义框提的方法
+    borders = xlwt.Borders()
+    borders.left = ileft
+    borders.right = iright
+    borders.top = itop
+    borders.bottom = ibuttom
+    borders.bottom_colour=0x3A
+    return borders
+
+alignmentMilldle = xlwt.Alignment()                        #居中且自动换行的xlwt对象
+alignmentMilldle.horz = 0x02
+alignmentMilldle.vert = 0x04
+
+
+def fStyleBackGround (iBackGroundColor,iFontColor,iBold,iUnderline,borders) : #定义样式的方法，参数分别为，背景色，字体色，是否加粗，是否下划线，边框样式
+
+    backgroundcolor = xlwt.Pattern()
+    backgroundcolor.pattern =backgroundcolor.SOLID_PATTERN
+    backgroundcolor.pattern_fore_colour = iBackGroundColor
+    styleBackGround = xlwt.XFStyle()
+    styleBackGround.borders = borders
+    styleBackGround.pattern = backgroundcolor
+
+    styleBackGround.font.bold = iBold
+    styleBackGround.font.underline = iUnderline
+    styleBackGround.font.colour_index = iFontColor
+    styleBackGround.alignment = alignmentMilldle
+    styleBackGround.font.name = 'Arial'
+    styleBackGround.font.height=210
+
+    return styleBackGround
+
+styleTilea = xlwt.XFStyle()                             #210号字体
+styleTilea.font.height = 300
+styleTilea.font.name='Comic Sans MS'
+styleTilea.font.italic=1
+styleTilea.font.bold = 1
+
+styleTile = xlwt.XFStyle()                              #280号字体
+styleTile.font.height = 240
+styleTile.font.bold = 1
+
+styleBorders4 = xlwt.XFStyle()                             #定义四周框全部细黑框，上边框加粗，文本居中，后面可以用fStyleBackGround，这里为了方便
+styleBorders4.borders = fBorders(1,1,1,1)
+styleBorders4.font.name = 'Arial'
+styleBorders4.font.height=240
+styleBorders4.alignment = alignmentMilldle
+
+styleunderline=fStyleBackGround (WHITE,BLACK,0,0,fBorders(0,0,0,1))
+styletxt=fStyleBackGround (WHITE,BLACK,0,0,fBorders(0,0,0,0))
+Styleblue=fStyleBackGround (BLUE,BLACK,0,0,fBorders(1,1,1,1))
+
+###################################################################################################################
+
+def fLastDayOfLastMonth(cYear,cMonth):
+    iMonth = string.atoi(cMonth)
+    iYear = string.atoi(cYear)
+    if iMonth == 1:
+        return  31
+    else:
+        iLastMonth = iMonth -1
+        iLastDateOfLastMonth = calendar.monthrange(iYear,iLastMonth)[1]
+        return  iLastDateOfLastMonth
+
+
+def fMonthRangeSting(cYear,cMonth,x):        #日期范围,参数x=1，表示去该月的头一天到最后一天，x=0表示去上月10号到本月11号
+
+    iMonth = string.atoi(cMonth)
+    iYear = string.atoi(cYear)
+    iLastDateOfMonth = calendar.monthrange(iYear,iMonth)[1] #只需要知道最后一天是几号
+    cLastDateOfMonth ='%d' %iLastDateOfMonth
+    if x == 1:
+        str = YEAR + '/' +  cMonth + '/'+ '01' + '-' +  YEAR + '/' +  cMonth + '/'+ cLastDateOfMonth
+    if x == 0:
+        if iMonth == 1:
+            iLastYear = iYear -1
+            cLastYear = '%d' %iLastYear
+            str = cLastYear + '/' + '12' + '/' +  '11' + '-' +  YEAR + '/'  + cMonth + '/' + '10'
+        else:
+            iLastMonth = iMonth -1
+            cLastMonth =  '%d' %iLastMonth
+            str = YEAR + '/' + cLastMonth + '/' +  '11' + '-' +  YEAR+ '/'  +cMonth + '/' + '10'
+    return  str
+
+def fIsNegtive(cstr):
+    try:
+        istr =atof(cstr)
+    except:
+        istr = cstr
+
+    if istr < 0:
+        return  1
+    return  0
+
+
+def  fNegativeNumberToStr(str):
+
+    istr = string.atof(float(str))
+    cstr = "%.2f" %istr
+    return istr
+
+
+def fCreateSheetWriteTile(cSheetName):                          #用来写固定表头的方法
+    sWriteSheet = eInputExel.add_sheet(cSheetName,1)
+    sWriteSheet.insert_bitmap('logo.bmp',0,0)     #插入图片
+    sWriteSheet.col(3).width = 3333;
+    sWriteSheet.col(4).width = 2600;
+    sWriteSheet.col(15).width = 2600;
+    rowTableTile0 = sWriteSheet.row(0) ;
+    rowTableTile1 = sWriteSheet.row(2);
+    rowTableTile2 = sWriteSheet.row(4);
+    rowTableTile3 = sWriteSheet.row(5);
+    sWriteSheet.col(0).width = 3333
+    sWriteSheet.col(1).width = 3333
+    sWriteSheet.col(38).width = 3300
+    rowTableTile2.height =6000
+
+    rowTableTile1.write(16,u'Department Monthly Attendance Control Sheet  部门月考勤报告',styleTile)
+
+
+    #cDateMonth = YEAR + u'年' + fMonthDictionary(cSheetName);
+    #rowTableTile0.write(5,cDateMonth,styleTileYM)
+    #rowTableTile0.write(6,u'月考勤汇总表 Attendance Summary ',styleTile)
+
+    #sWriteSheet.write_merge(1,1,9,10, u'考勤周期：',styleTile)            #合并单元格。前2个表示行数，后2表示列数
+    #sWriteSheet.write_merge(1,1,11,13,fMonthRangeSting(YEAR,fMonthDictionary(cSheetName),0),styleTile)
+    #rowTableTile1.write(5,u'区域：',styleTile)
+    rowTableTile2.write(0,u'Code',fStyleBackGround(WHITE,BLACK,1,0,fBorders(1,1,2,1)));
+    rowTableTile2.write(1,u'Name',fStyleBackGround(WHITE,BLACK,1,0,fBorders(1,1,2,1)));
+    rowTableTile2.write(2,u'本月标准工时',fStyleBackGround(WHITE,BLACK,1,0,fBorders(1,1,2,1)));
+    rowTableTile2.write(3,u'152',fStyleBackGround(WHITE,RED,1,1,fBorders(1,6,2,1)));
+    rowTableTile2.write(3,u'xx',fStyleBackGround(WHITE,RED,1,1,fBorders(1,6,2,1)));
+    sWriteSheet.write_merge(4,4,4,6,u'Overtime Control',fStyleBackGround(WHITE,BLACK,1,0,fBorders(0,6,2,1)));
+    rowTableTile3.write(0,u'工号',fStyleBackGround(WHITE,BLACK,1,0,fBorders(1,1,1,1)));
+    rowTableTile3.write(1,u'姓名',fStyleBackGround(WHITE,BLACK,1,0,fBorders(1,1,1,1)));
+    str1 = u'实际'+ '\n' + 'Actual'
+    rowTableTile3.write(2,str1,fStyleBackGround(YELLOW,BLACK,1,0,fBorders(1,1,1,1)));
+    str2 = u'翻班'+ '\n' + 'shift'
+    rowTableTile3.write(3,str2,fStyleBackGround(WHITE,BLACK,1,0,fBorders(1,6,1,1)))
+
+    rowTableTile3.write(4,u'Mon.-Fri.',fStyleBackGround(YELLOW,BLACK,1,0,fBorders(1,1,1,1)));
+    rowTableTile3.write(5,u'Weekend',fStyleBackGround(WHITE,BLACK,1,0,fBorders(1,1,1,1)));
+    rowTableTile3.write(6,u'Holi.',fStyleBackGround(WHITE,BLACK,1,0,fBorders(1,6,1,1)));
+    sWriteSheet.write_merge(4,5,7,7, u'S',fStyleBackGround(YELLOW,BLACK,1,0,fBorders(1,1,2,1)))
+    sWriteSheet.write_merge(4,5,8,8, u'A',fStyleBackGround(YELLOW,BLACK,1,0,fBorders(1,1,2,1)))
+    sWriteSheet.write_merge(4,5,9,9, u'P/X',fStyleBackGround(YELLOW,BLACK,1,0,fBorders(1,1,2,1)))
+    sWriteSheet.write_merge(4,5,10,10, u'Other',fStyleBackGround(WHITE,BLACK,1,0,fBorders(1,1,2,1)))
+    sWriteSheet.write_merge(4,5,11,11, u'*Meal allowance',fStyleBackGround(WHITE,BLACK,1,0,fBorders(1,6,2,1)))
+
+
+    iLastDayOfLastMonth =fLastDayOfLastMonth(YEAR ,MONTH)
+    iThisMonth = 10
+    i = 11
+    m = 12
+    n = 1
+    while i <=  iLastDayOfLastMonth:
+        sWriteSheet.col(m).width = 2000
+        rowTableTile3.write(m,i,styleBorders4 )
+        if i == iLastDayOfLastMonth:
+            rowTableTile3.write(m,i,styleBorders4 )
+        elif (i==11 or i==12 or i==18 or i==19 or i==25 or i==26):
+            rowTableTile3.write(m,i,styleBorders4 )
+        i = i + 1
+        m = m + 1
+    year= string.atoi(YEAR)
+    year1= '%d' %year
+    month1 = string.atoi(MONTH)
+    month2=month1-1
+    month3 = '%d' %month2
+    month4= '%d' %month1
+    sWriteSheet.write_merge(4,4,12,m-1,year1 +u'年'+month3+u'月',styleBorders4 )
+    m1 = m
+    rowTableTile0.write(m+2,u'Dept.',styletxt)
+    rowTableTile1.write(m+2,u'Month',styletxt)
+
+    while n <=iThisMonth:
+        sWriteSheet.col(m).width = 2000
+        rowTableTile3.write(m,n,styleBorders4 )
+        if n==iThisMonth:
+         rowTableTile3.write(m,n)
+        elif(n==1 or n==2 or n==3 or n==9 or n==10):
+         rowTableTile3.write(m,n)
+        n = n + 1
+        m = m + 1
+
+    sWriteSheet.write_merge(0,0,m-5,m-1, u'',styleunderline)
+
+    sWriteSheet.write_merge(2,2,m-5,m-1,year1 +u'年'+ month4 + u'月',styleunderline)
+    sWriteSheet.write_merge(4,4,m1,m-1, year1+u'年'+  month4+u'月',styleBorders4)
+    eInputExel.save(InputExelName);
+    return  sWriteSheet;                #返回sheet对象
+
+
+
+def fWriteInfo(iIndex,*cReadExel):   #读取读取特定位置的sheet，可变长度参数，每次需要合并的exel数量不确定
+
+    if iIndex <= 0:
+        iIndex = 0
+
+
+
+    isRead = 0;
+    nRows_Write = 6; #写入起始位置 ，第一次为6
+
+    sWriteSheet = fCreateSheetWriteTile(SHEETNAME) ; #写表头 并获取sheet对象
+    for var in cReadExel:
+        nRows_rows =0
+        if var == InputExelName:
+            continue               #防止自己读自己
+        try:
+
+           e1= xlrd.open_workbook(var,formatting_info=1,encoding_override="utf-8")
+
+        except:
+            #print '无法打开文件，错误的文件类型，或者目录路径'
+            break
+
+        countsheet = len(e1.sheets())
+
+
+        try:
+            sheet1 = e1.sheets()[iIndex]
+
+        except:
+            continue
+
+
+        isRead = 1;
+        x = 6
+        while 1:
+          sd =  sheet1.cell(x,0).value
+          if  sd == 'Prepared & Checked By:':
+            break
+          else:
+            x = x + 1
+            nRows_rows = nRows_rows + 1
+        nRows_Read = nRows_rows-5
+
+        row_list =[]
+        row_color = []
+
+        r = 12+ fLastDayOfLastMonth(YEAR,MONTH) ;
+
+
+        for i in range(1,nRows_Read):
+
+            row_data = sheet1.row_values(i+5)
+            row_list.append(row_data)
+            c = 0
+            while (c< r):
+                color = sheet1.cell(i+5,c).xf_index
+                xf = e1.xf_list[color]
+                bgx = xf.background.pattern_colour_index
+                row_color.append(bgx)
+                c = c+1
+
+
+        m = 0
+        n = 0
+
+        while (m <= (nRows_Read-2)):             # 从0开始要-1，去掉末尾那段文字再-1
+            while(n<=r -1 ):
+                rowInfo = sWriteSheet.row(nRows_Write + m)
+                if (n <= 11 ):
+                     mod = m%3;
+
+                     if mod==2:
+
+                      sWriteSheet.write_merge(nRows_Write + m-2,nRows_Write + m+0,n,n,row_list[m-2][n],styleBorders4)
+                elif(row_color[r*m+n]!=9 and row_color[r*m+n]!=64 ):
+
+                      rowInfo.write(n,row_list[m][n],Styleblue)
+                else:
+
+                      rowInfo.write(n,row_list[m][n],styleBorders4)
+                n = n + 1;
+            n = 0;
+            if m == (nRows_Read -2):
+                nRows_Write = nRows_Write + nRows_Read - 1 # 最后一次循环结束前，定位下一次写入的位置
+            m = m + 1;
+
+
+        #print row_color[42*m+n]
+    sWriteSheet.write(nRows_Write + 1 ,0,u'注：出勤标出实际工作小时:“A”表示年假;“S”表示病假;“P”表示事假;“X”表示缺勤;“M”表示产假;"T"表示外出培训/开会;"WA"表示工伤;"MR”表示婚假;“CP”表示补休;“FN”表示丧假')
+    sWriteSheet.write(nRows_Write + 2,0,u'Notice: Being on Duty, pls. indicate the actual working hour;"A" for annual leave;"S" for sick leave;"P" for personal leave;"X" for absence, M for Maternity leave; T for Training / Meeting;WA for working accident;  "MR" for marriage leave; "CP" for compensation leave; "FN" for Funeral leave.')
+    sWriteSheet.write(nRows_Write + 3,0,u'*因工作需要无法在公司餐厅用餐而误餐。')
+    sWriteSheet.write(nRows_Write + 4,0,u'If a staff can not have lunch in company canteen due to the business trip ')
+    sWriteSheet.write(nRows_Write + 6,0,u'Prepared & Checked By:',styleTilea)
+    sWriteSheet.write(nRows_Write + 6,4,u'',fStyleBackGround (WHITE,BLACK,0,0,fBorders(0,0,0,2)))
+    sWriteSheet.write(nRows_Write + 6,5,u'',fStyleBackGround (WHITE,BLACK,0,0,fBorders(0,0,0,2)))
+    sWriteSheet.write(nRows_Write + 6,6,u'',fStyleBackGround (WHITE,BLACK,0,0,fBorders(0,0,0,1)))
+    sWriteSheet.write(nRows_Write + 6,10,u'Approved by Dept. manager : ',styleTilea)
+    sWriteSheet.write(nRows_Write + 6,14,u'')
+    sWriteSheet.write(nRows_Write + 6,15,u'',fStyleBackGround (WHITE,BLACK,0,0,fBorders(0,0,0,2)))
+    sWriteSheet.write(nRows_Write + 6,16,u'',fStyleBackGround (WHITE,BLACK,0,0,fBorders(0,0,0,2)))
+    sWriteSheet.write(nRows_Write + 6,6,u'',fStyleBackGround (WHITE,BLACK,0,0,fBorders(0,0,0,2)))
+    sWriteSheet.write(nRows_Write + 6,20,u'Checked By HR Dept.',styleTilea)
+    sWriteSheet.write(nRows_Write + 6,24,u'')
+    sWriteSheet.write(nRows_Write + 6,25,u'',fStyleBackGround (WHITE,BLACK,0,0,fBorders(0,0,0,2)))
+    sWriteSheet.write(nRows_Write + 6,26,u'',fStyleBackGround (WHITE,BLACK,0,0,fBorders(0,0,0,2)))
+    eInputExel.save(InputExelName)
+
+    if isRead == 1:
+        return  1
+    return 0
+
+
+def fFilesWalk():                            #文件遍历
+    filelist = os.listdir(DIR)
+    xlsFilelist = []
+    a = len(filelist)
+    i = 0 ;
+    while (i < a):
+        strlen = len(filelist[i])        #暂时不会用到，
+        x = filelist[i].rfind('.')
+        if x == -1:
+            i = i + 1
+            continue;
+        else:
+            filetype =  filelist[i][x+1:]         #截取末尾
+            if filetype == 'xls'  or filetype == 'xlsx':
+                xlsFilelist.append(filelist[i])
+        i = i + 1
+
+    if len(xlsFilelist) == 0:
+            #表示没有找到含有任何文件
+        return 0;
+
+    return  xlsFilelist;    #返回符合要求的文件名数组
+
+
+
+
+def fMonthDictionary(cSheetName):  #字典，用来判断sheetname的各种月份（或者其他名字）表示方式到底指的是哪个月（或者其他含义），目前作用仅仅是方便写表头的日期数字，
+# 后续如果要对sheet之间的关系做计算，通过维护这个方法的逻辑来完成
+
+    cMonth = '1'  #默认从1月开始？
+    if cSheetName.upper() == 'JAN' or cSheetName[0:2] == u'1月'  or cSheetName[-3:] == '.01':
+        cMonth = '1'
+    if cSheetName.upper == 'FEB' or cSheetName[0:2] == u'2月'  or cSheetName[-3:] == '.02':
+        cMonth = '2'
+    if cSheetName.upper == 'MAR' or cSheetName[0:2] == u'3月'  or cSheetName[-3:] == '.03':
+        cMonth = '3'
+    if cSheetName.upper == 'APR' or cSheetName[0:2] == u'4月'  or cSheetName[-3:] == '.04':
+        cMonth = '4'
+    if cSheetName.upper == 'MAY' or cSheetName[0:2] == u'5月'  or cSheetName[-3:] == '.05':
+        cMonth = '5'
+    if cSheetName.upper == 'JUN' or cSheetName[0:2] == u'6月'  or cSheetName[-3:] == '.06':
+        cMonth = '6'
+    if cSheetName.upper == 'JUL' or cSheetName[0:2] == u'7月'  or cSheetName[-3:] == '.07':
+        cMonth = '7'
+    if cSheetName.upper == 'AUG' or cSheetName[0:2] == u'8月'  or cSheetName[-3:] == '.08':
+        cMonth = '8'
+    if cSheetName.upper == 'SEP' or cSheetName[0:2] == u'9月'  or cSheetName[-3:] == '.09':
+        cMonth = '9'
+    if cSheetName.upper == 'OCT' or cSheetName[0:3] == u'10月'  or cSheetName[-3:] == '.10':
+        cMonth = '10'
+    if cSheetName.upper == 'NOV' or cSheetName[0:3] == u'11月'  or cSheetName[-3:] == '.11':
+        cMonth = '11'
+    if cSheetName.upper == 'DEC' or cSheetName[0:3] == u'12月'  or cSheetName[-3:] == '.12':
+        cMonth = '12'
+    return cMonth
+
+
+def fPathModify(cPath):
+    cPath.replace('\\','/')
+    cPath.replace('/','\\',1)
+    return  cPath
+
+
+########################################################################################################################
+
+#程序从这里开始
+
+
+eInputExel=xlwt.Workbook(style_compression=2,);  #打开写入的文件，
+
+
+
+
+
+
+
+fWriteInfo(0,*fFilesWalk())
+
+
+
+
+
+
+
